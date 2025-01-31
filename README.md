@@ -33,11 +33,15 @@ go build
 
 ### Use default HAProxy socket path (`/var/run/haproxy/admin.sock`)
 
+```bash
 ./lazyhap
+```
 
 ### Specify custom socket path
 
+```bash
 ./lazyhap /path/to/custom/haproxy/admin.sock
+```
 
 ## Controls
 
