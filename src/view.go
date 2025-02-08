@@ -27,18 +27,16 @@ func (m model) View() string {
 
 	switch m.activeTab {
 	case statsTab:
-		timeStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			MarginLeft(2)
-		sb.WriteString(timeStyle.Render(fmt.Sprintf("Last updated: %s", m.lastFetch.Format("15:04:05"))))
+		sb.WriteString(renderLastUpdatedTime(m))
 		sb.WriteString("\n")
 		sb.WriteString(baseStyle.Render(m.table.View()))
 		sb.WriteString("\n")
 		sb.WriteString("Commands: (d)isable server, (e)nable server, set (w)eight to 100")
 
 	case infoTab:
-		m.viewport.SetContent(m.info)
-		sb.WriteString(baseStyle.Render(m.viewport.View()))
+		sb.WriteString(baseStyle.Render(m.table.View()))
+		sb.WriteString("\n")
+		sb.WriteString("Commands: (y) to yank value to clipboard")
 
 	case errorTab:
 		m.viewport.SetContent(m.errors)
@@ -54,4 +52,8 @@ func (m model) View() string {
 	}
 
 	return sb.String()
+}
+
+func renderLastUpdatedTime(m model) (Rendered string) {
+	return timeStyle.Render(fmt.Sprintf("Last updated: %s", m.lastFetch.Format("15:04:05")))
 }

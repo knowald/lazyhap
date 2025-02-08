@@ -32,14 +32,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 
 	case []table.Row:
-		m.lastFetch = time.Now()
-		m.table.SetRows(msg)
+		if m.activeTab == statsTab {
+			m.lastFetch = time.Now()
+			m.table.SetRows(msg)
+		}
 		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
 			return fetchStats(m.config)
 		})
 
 	case infoMsg:
 		m.info = string(msg)
+		if m.activeTab == infoTab {
+			rows := parseInfoToRows(m.info)
+			m.table.SetRows(rows)
+		}
 		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
 			return fetchInfo(m.config)
 		})
@@ -66,12 +72,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c", "esc":
 			return m, tea.Quit
-		case "tab", "right", "l":
-			m.activeTab = (m.activeTab + 1) % 5
-			return m, nil
-		case "shift+tab", "left", "h":
-			m.activeTab = (m.activeTab - 1 + 5) % 5
-			return m, nil
 		case "D", "d":
 			if m.activeTab == statsTab {
 				selectedRow := m.table.SelectedRow()
@@ -105,11 +105,67 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
+		case "tab", "right", "l":
+			previousTab := m.activeTab
+			m.activeTab = (m.activeTab + 1) % 5
+			if m.activeTab == infoTab {
+				m.table = initializeInfoTable()
+				rows := parseInfoToRows(m.info)
+				m.table.SetRows(rows)
+				m.viewport.SetContent(m.info)
+				return m, nil
+			} else if m.activeTab == statsTab {
+				oldRows := m.table.Rows()
+				m.table = initializeStatsTable()
+				if len(oldRows) > 0 {
+					m.table.SetRows(oldRows)
+				}
+				if previousTab != statsTab {
+					return m, func() tea.Msg {
+						return fetchStats(m.config)
+					}
+				}
+			}
+			return m, nil
+		case "shift+tab", "left", "h":
+			previousTab := m.activeTab
+			m.activeTab = (m.activeTab - 1 + 5) % 5
+			if m.activeTab == infoTab {
+				m.table = initializeInfoTable()
+				rows := parseInfoToRows(m.info)
+				m.table.SetRows(rows)
+				m.viewport.SetContent(m.info)
+				return m, nil
+			} else if m.activeTab == statsTab {
+				oldRows := m.table.Rows()
+				m.table = initializeStatsTable()
+				if len(oldRows) > 0 {
+					m.table.SetRows(oldRows)
+				}
+				if previousTab != statsTab {
+					return m, func() tea.Msg {
+						return fetchStats(m.config)
+					}
+				}
+				return m, nil
+			}
+		case "y":
+			if m.activeTab == infoTab {
+				selectedRow := m.table.SelectedRow()
+				if len(selectedRow) >= 2 { // Make sure we have at least value column
+					value := selectedRow[1] // The "Value" column
+					// Copy to clipboard using xclip/pbcopy depending on OS
+					err := copyToClipboard(value)
+					if err != nil {
+						m.err = err
+					}
+				}
+			}
 		}
 	}
 
 	switch m.activeTab {
-	case statsTab:
+	case statsTab, infoTab:
 		m.table, cmd = m.table.Update(msg)
 		cmds = append(cmds, cmd)
 	default:
