@@ -68,6 +68,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return fetchSessions(m.config)
 		})
 
+	case clearMessageMsg:
+		m.message = ""
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c", "esc":
@@ -152,12 +156,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "y":
 			if m.activeTab == infoTab {
 				selectedRow := m.table.SelectedRow()
-				if len(selectedRow) >= 2 { // Make sure we have at least value column
-					value := selectedRow[1] // The "Value" column
-					// Copy to clipboard using xclip/pbcopy depending on OS
+				if len(selectedRow) >= 2 {
+					value := selectedRow[1]
 					err := copyToClipboard(value)
 					if err != nil {
 						m.err = err
+					} else {
+						m.message = "✓ Copied to clipboard!"
+						return m, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+							return clearMessageMsg{}
+						})
 					}
 				}
 			}

@@ -25,6 +25,7 @@ const (
 
 type model struct {
 	table     table.Model
+	message   string
 	viewport  viewport.Model
 	activeTab tab
 	tabs      []string
@@ -55,6 +56,8 @@ type (
 	poolsMsg   string
 	sessionMsg string
 )
+
+type clearMessageMsg struct{}
 
 func fetchStats(cfg Config) tea.Msg {
 	conn, err := net.Dial("unix", cfg.socketPath)
