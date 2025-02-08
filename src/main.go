@@ -116,22 +116,23 @@ func fetchStats(cfg Config) tea.Msg {
 func parseInfoToRows(info string) []table.Row {
 	var rows []table.Row
 	lines := strings.Split(info, "\n")
-
 	for _, line := range lines {
-		// Skip empty lines
+		// skip empty lines
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-
-		// Split on first ':'
+		// split on first ':'
 		parts := strings.Split(line, ":")
 		if len(parts) < 2 {
 			continue
 		}
-
-		rows = append(rows, table.Row(parts))
+		// trim the spaces
+		trimmedParts := make([]string, len(parts))
+		for i, part := range parts {
+			trimmedParts[i] = strings.TrimSpace(part)
+		}
+		rows = append(rows, table.Row(trimmedParts))
 	}
-
 	return rows
 }
 
