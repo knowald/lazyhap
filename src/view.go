@@ -36,7 +36,11 @@ func (m model) View() string {
 	case infoTab:
 		sb.WriteString(baseStyle.Render(m.table.View()))
 		sb.WriteString("\n")
-		sb.WriteString("Commands: (y) to yank value to clipboard")
+		if m.message != "" {
+			sb.WriteString(m.message)
+		} else {
+			sb.WriteString("Commands: (y) to yank value to clipboard")
+		}
 
 	case errorTab:
 		m.viewport.SetContent(m.errors)
