@@ -1,0 +1,16 @@
+services:
+  haproxy:
+    image: haproxy:lts
+    volumes:
+      - ./haproxy/:/usr/local/etc/haproxy/
+      - ./tmp/haproxy/:/var/run/haproxy/
+    ports:
+      - "80:80"
+      - "8404:8404"
+    entrypoint: /bin/sh /usr/local/etc/haproxy/entrypoint.sh
+    command: ["haproxy", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+
+  echo-servers:
+    image: jmalloc/echo-server:latest
+    deploy:
+      replicas: 3

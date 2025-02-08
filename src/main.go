@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type tab int
@@ -22,23 +21,6 @@ const (
 	errorTab
 	poolsTab
 	sessionsTab
-)
-
-// gotta be stylish
-var (
-	activeTabStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("205")).
-			Background(lipgloss.Color("57")).
-			Padding(0, 1)
-
-	tabStyle = lipgloss.NewStyle().
-			Padding(0, 1)
-
-	baseStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240")).
-			MarginLeft(2)
 )
 
 type model struct {
@@ -103,21 +85,12 @@ func fetchStats(cfg Config) tea.Msg {
 			continue
 		}
 
-		var status string
-		if fields[17] == "UP" { // Clean status field
-			status = styleStatus("UP")
-		} else if fields[17] == "DOWN" {
-			status = styleStatus("DOWN")
-		} else {
-			status = fields[17]
-		}
-
 		row := table.Row{
 			// truncate(fields[0], 18), // Name
 			// truncate(fields[1], 13), // Server
 			fields[0],              // Name
 			fields[1],              // Server
-			status,                 // Status
+			fields[17],             // Status
 			fields[4],              // Current Sessions
 			fields[5],              // Max Sessions
 			fields[7],              // Total Sessions
@@ -148,15 +121,12 @@ func parseInfoToRows(info string) []table.Row {
 		}
 
 		// Split on first ':'
-		parts := strings.SplitN(line, ":", 2)
+		parts := strings.Split(line, ":")
 		if len(parts) < 2 {
 			continue
 		}
 
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
-		rows = append(rows, table.Row{key, value})
+		rows = append(rows, table.Row(parts))
 	}
 
 	return rows
@@ -167,21 +137,6 @@ func truncate(s string, length int) string {
 		return s
 	}
 	return s[:length-3] + "..."
-}
-
-func styleStatus(status string) string {
-	switch strings.ToLower(status) {
-	case "up":
-		return lipgloss.NewStyle().
-			Foreground(lipgloss.Color("10")).
-			Render("UP")
-	case "down":
-		return lipgloss.NewStyle().
-			// Foreground(lipgloss.Color("9")).
-			Render("DOWN")
-	default:
-		return status
-	}
 }
 
 func formatBytes(bytes string) string {
@@ -205,16 +160,26 @@ func stringToInt(s string) int64 {
 	return i
 }
 
-func main() {
-	cfg := Config{
-		socketPath: "/var/run/haproxy/admin.sock", // default path
+func initializeInfoTable() table.Model {
+	info_columns := []table.Column{
+		{Title: "Name", Width: 15},
+		{Title: "Value", Width: 25},
+		{Title: "Description", Width: 120},
 	}
 
-	if len(os.Args) > 1 {
-		cfg.socketPath = os.Args[1]
-	}
+	info_table := table.New(
+		table.WithColumns(info_columns),
+		table.WithFocused(true),
+		table.WithHeight(20),
+	)
 
-	columns := []table.Column{
+	info_table.SetStyles(statsTableStyles())
+
+	return info_table
+}
+
+func initializeStatsTable() table.Model {
+	stats_columns := []table.Column{
 		{Title: "Name", Width: 40},
 		{Title: "Server", Width: 25},
 		{Title: "Status", Width: 8},
@@ -227,30 +192,28 @@ func main() {
 		{Title: "Weight", Width: 8},
 	}
 
-	t := table.New(
-		table.WithColumns(columns),
+	stats_table := table.New(
+		table.WithColumns(stats_columns),
 		table.WithFocused(true),
 		table.WithHeight(20),
 	)
 
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(true).
-		Foreground(lipgloss.Color("205"))
+	stats_table.SetStyles(statsTableStyles())
 
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
+	return stats_table
+}
 
-	t.SetStyles(s)
+func main() {
+	cfg := Config{
+		socketPath: "/var/run/haproxy/admin.sock", // default path
+	}
+	if len(os.Args) > 1 {
+		cfg.socketPath = os.Args[1]
+	}
 
 	// Initial state
 	m := model{
-		table:     t,
+		table:     initializeStatsTable(),
 		viewport:  viewport.New(80, 20),
 		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions"},
 		activeTab: statsTab,
@@ -261,7 +224,6 @@ func main() {
 		m,
 		tea.WithAltScreen(),
 	)
-
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running program: %v\n", err)
 	}
