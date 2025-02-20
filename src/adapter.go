@@ -29,6 +29,10 @@ func fetchCerts(cfg Config) tea.Msg {
 	return certsMsg(execCommand(cfg, "show ssl cert"))
 }
 
+func fetchThreads(cfg Config) tea.Msg {
+	return threadsMsg(execCommand(cfg, "show threads"))
+}
+
 func disableServer(cfg Config, backend, server string) tea.Cmd {
 	return func() tea.Msg {
 		cmd := fmt.Sprintf("disable server %s/%s", backend, server)

@@ -6,6 +6,7 @@ import (
 	"lazyhap/src/views/error"
 	"lazyhap/src/views/info"
 	"lazyhap/src/views/stats"
+	"lazyhap/src/views/threads"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -36,6 +37,8 @@ func (m model) View() string {
 		renderSessionsTab(&sb, m)
 	case certsTab:
 		certs.RenderTab(&sb, m, baseStyle)
+	case threadsTab:
+		threads.RenderTab(&sb, m, baseStyle)
 	}
 
 	return sb.String()

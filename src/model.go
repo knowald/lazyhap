@@ -18,6 +18,7 @@ func (m model) Init() tea.Cmd {
 		func() tea.Msg { return fetchPools(m.config) },
 		func() tea.Msg { return fetchSessions(m.config) },
 		func() tea.Msg { return fetchCerts(m.config) },
+		func() tea.Msg { return fetchThreads(m.config) },
 	)
 }
 
@@ -86,6 +87,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.certs = string(msg)
 		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
 			return fetchCerts(m.config)
+		})
+
+	case threadsMsg:
+		m.threads = string(msg)
+		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+			return fetchThreads(m.config)
 		})
 
 	case clearMessageMsg:
@@ -228,4 +235,8 @@ func (m model) GetMessage() string {
 
 func (m model) CertsView() string {
 	return m.certs
+}
+
+func (m model) ThreadsView() string {
+	return m.threads
 }
