@@ -22,6 +22,7 @@ const (
 	errorTab
 	poolsTab
 	sessionsTab
+	certsTab
 )
 
 type model struct {
@@ -33,6 +34,7 @@ type model struct {
 	info      string
 	errors    string
 	pools     string
+	certs     string
 	sessions  string
 	err       error
 	lastFetch time.Time
@@ -46,6 +48,7 @@ type (
 	errorMsg   string
 	poolsMsg   string
 	sessionMsg string
+	certsMsg   string
 )
 
 type clearMessageMsg struct{}
@@ -139,7 +142,7 @@ func main() {
 	m := model{
 		table:     stats.InitializeTable(),
 		viewport:  viewport.New(80, 20),
-		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions"},
+		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions", "Certs"},
 		activeTab: statsTab,
 		config:    cfg,
 	}
