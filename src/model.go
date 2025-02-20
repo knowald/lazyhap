@@ -17,6 +17,7 @@ func (m model) Init() tea.Cmd {
 		func() tea.Msg { return fetchErrors(m.config) },
 		func() tea.Msg { return fetchPools(m.config) },
 		func() tea.Msg { return fetchSessions(m.config) },
+		func() tea.Msg { return fetchCerts(m.config) },
 	)
 }
 
@@ -81,6 +82,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return fetchSessions(m.config)
 		})
 
+	case certsMsg:
+		m.certs = string(msg)
+		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+			return fetchCerts(m.config)
+		})
+
 	case clearMessageMsg:
 		m.message = ""
 		return m, nil
@@ -124,7 +131,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "tab", "right", "l":
 			previousTab := m.activeTab
-			m.activeTab = (m.activeTab + 1) % 5
+			m.activeTab = tab((int(m.activeTab) + 1) % len(m.tabs))
 			if m.activeTab == infoTab {
 				m.table = info.InitializeTable()
 				rows := parseInfoToRows(m.info)
@@ -146,7 +153,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "shift+tab", "left", "h":
 			previousTab := m.activeTab
-			m.activeTab = (m.activeTab - 1 + 5) % 5
+			m.activeTab = tab((int(m.activeTab) - 1 + len(m.tabs)) % len(m.tabs))
 			if m.activeTab == infoTab {
 				m.table = info.InitializeTable()
 				rows := parseInfoToRows(m.info)
@@ -217,4 +224,8 @@ func (m model) LastFetchTime() string {
 
 func (m model) GetMessage() string {
 	return m.message
+}
+
+func (m model) CertsView() string {
+	return m.certs
 }

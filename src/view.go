@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"lazyhap/src/views/certs"
 	"lazyhap/src/views/error"
 	"lazyhap/src/views/info"
 	"lazyhap/src/views/stats"
@@ -33,6 +34,8 @@ func (m model) View() string {
 	case sessionsTab:
 		// TODO: Separate into package
 		renderSessionsTab(&sb, m)
+	case certsTab:
+		certs.RenderTab(&sb, m, baseStyle)
 	}
 
 	return sb.String()
