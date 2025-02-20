@@ -1,11 +1,24 @@
 package main
 
 import (
+	"lazyhap/src/views/info"
+	"lazyhap/src/views/stats"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+func (m model) Init() tea.Cmd {
+	return tea.Batch(
+		func() tea.Msg { return fetchStats(m.config) },
+		func() tea.Msg { return fetchInfo(m.config) },
+		func() tea.Msg { return fetchErrors(m.config) },
+		func() tea.Msg { return fetchPools(m.config) },
+		func() tea.Msg { return fetchSessions(m.config) },
+	)
+}
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -113,14 +126,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			previousTab := m.activeTab
 			m.activeTab = (m.activeTab + 1) % 5
 			if m.activeTab == infoTab {
-				m.table = initializeInfoTable()
+				m.table = info.InitializeTable()
 				rows := parseInfoToRows(m.info)
 				m.table.SetRows(rows)
 				m.viewport.SetContent(m.info)
 				return m, nil
 			} else if m.activeTab == statsTab {
 				oldRows := m.table.Rows()
-				m.table = initializeStatsTable()
+				m.table = stats.InitializeTable()
 				if len(oldRows) > 0 {
 					m.table.SetRows(oldRows)
 				}
@@ -135,14 +148,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			previousTab := m.activeTab
 			m.activeTab = (m.activeTab - 1 + 5) % 5
 			if m.activeTab == infoTab {
-				m.table = initializeInfoTable()
+				m.table = info.InitializeTable()
 				rows := parseInfoToRows(m.info)
 				m.table.SetRows(rows)
 				m.viewport.SetContent(m.info)
 				return m, nil
 			} else if m.activeTab == statsTab {
 				oldRows := m.table.Rows()
-				m.table = initializeStatsTable()
+				m.table = stats.InitializeTable()
 				if len(oldRows) > 0 {
 					m.table.SetRows(oldRows)
 				}
@@ -182,4 +195,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+// Model get/set
+
+func (m model) GetViewport() viewport.Model {
+	return m.viewport
+}
+
+func (m model) ErrorView() string {
+	return m.errors
+}
+
+func (m model) TableView() string {
+	return m.table.View()
+}
+
+func (m model) LastFetchTime() string {
+	return m.lastFetch.Format("15:04:05")
+}
+
+func (m model) GetMessage() string {
+	return m.message
 }

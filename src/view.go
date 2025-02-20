@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"lazyhap/src/views/error"
+	"lazyhap/src/views/info"
+	"lazyhap/src/views/stats"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -14,50 +17,53 @@ func (m model) View() string {
 
 	var sb strings.Builder
 
-	renderedTabs := []string{}
-	for i, t := range m.tabs {
-		if i == int(m.activeTab) {
-			renderedTabs = append(renderedTabs, activeTabStyle.Render(t))
-		} else {
-			renderedTabs = append(renderedTabs, tabStyle.Render(t))
-		}
-	}
-	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Left, renderedTabs...))
+	renderTabBar(&sb, m)
 	sb.WriteString("\n\n")
 
 	switch m.activeTab {
 	case statsTab:
-		sb.WriteString(renderLastUpdatedTime(m))
-		sb.WriteString("\n")
-		sb.WriteString(baseStyle.Render(m.table.View()))
-		sb.WriteString("\n")
-		sb.WriteString("Commands: (d)isable server, (e)nable server, set (w)eight to 100")
-
+		stats.RenderTab(&sb, m, baseStyle)
 	case infoTab:
-		sb.WriteString(baseStyle.Render(m.table.View()))
-		sb.WriteString("\n")
-		if m.message != "" {
-			sb.WriteString(m.message)
-		} else {
-			sb.WriteString("Commands: (y) to yank value to clipboard")
-		}
-
+		info.RenderTab(&sb, m, baseStyle)
 	case errorTab:
-		m.viewport.SetContent(m.errors)
-		sb.WriteString(baseStyle.Render(m.viewport.View()))
-
+		error.RenderTab(&sb, m, baseStyle)
 	case poolsTab:
-		m.viewport.SetContent(m.pools)
-		sb.WriteString(baseStyle.Render(m.viewport.View()))
-
+		// TODO: Separate into package
+		renderPoolsTab(&sb, m)
 	case sessionsTab:
-		m.viewport.SetContent(m.sessions)
-		sb.WriteString(baseStyle.Render(m.viewport.View()))
+		// TODO: Separate into package
+		renderSessionsTab(&sb, m)
 	}
 
 	return sb.String()
 }
 
-func renderLastUpdatedTime(m model) (Rendered string) {
+// Navigation header
+func renderTabBar(sb *strings.Builder, m model) {
+	renderedTabs := make([]string, len(m.tabs))
+	for i, t := range m.tabs {
+		if i == int(m.activeTab) {
+			renderedTabs[i] = activeTabStyle.Render(t)
+		} else {
+			renderedTabs[i] = tabStyle.Render(t)
+		}
+	}
+	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Left, renderedTabs...))
+	sb.WriteString(renderLastUpdatedTime(m))
+}
+
+// Tabs
+func renderPoolsTab(sb *strings.Builder, m model) {
+	m.viewport.SetContent(m.pools)
+	sb.WriteString(baseStyle.Render(m.viewport.View()))
+}
+
+func renderSessionsTab(sb *strings.Builder, m model) {
+	m.viewport.SetContent(m.sessions)
+	sb.WriteString(baseStyle.Render(m.viewport.View()))
+}
+
+// Timestamp, last updated
+func renderLastUpdatedTime(m model) string {
 	return timeStyle.Render(fmt.Sprintf("Last updated: %s", m.lastFetch.Format("15:04:05")))
 }

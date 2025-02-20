@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"lazyhap/src/views/stats"
 	"net"
 	"os"
 	"strings"
@@ -38,16 +39,6 @@ type model struct {
 	width     int
 	height    int
 	config    Config
-}
-
-func (m model) Init() tea.Cmd {
-	return tea.Batch(
-		func() tea.Msg { return fetchStats(m.config) },
-		func() tea.Msg { return fetchInfo(m.config) },
-		func() tea.Msg { return fetchErrors(m.config) },
-		func() tea.Msg { return fetchPools(m.config) },
-		func() tea.Msg { return fetchSessions(m.config) },
-	)
 }
 
 type (
@@ -136,77 +127,6 @@ func parseInfoToRows(info string) []table.Row {
 	return rows
 }
 
-func truncate(s string, length int) string {
-	if len(s) <= length {
-		return s
-	}
-	return s[:length-3] + "..."
-}
-
-func formatBytes(bytes string) string {
-	b := stringToInt(bytes)
-	const unit = 1024
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB",
-		float64(b)/float64(div), "KMGTPE"[exp])
-}
-
-func stringToInt(s string) int64 {
-	var i int64
-	fmt.Sscanf(s, "%d", &i)
-	return i
-}
-
-func initializeInfoTable() table.Model {
-	info_columns := []table.Column{
-		{Title: "Name", Width: 15},
-		{Title: "Value", Width: 25},
-		{Title: "Description", Width: 120},
-	}
-
-	info_table := table.New(
-		table.WithColumns(info_columns),
-		table.WithFocused(true),
-		table.WithHeight(20),
-	)
-
-	info_table.SetStyles(statsTableStyles())
-
-	return info_table
-}
-
-func initializeStatsTable() table.Model {
-	stats_columns := []table.Column{
-		{Title: "Name", Width: 40},
-		{Title: "Server", Width: 25},
-		{Title: "Status", Width: 8},
-		{Title: "Cur Sess", Width: 10},
-		{Title: "Max Sess", Width: 10},
-		{Title: "Tot Sess", Width: 10},
-		{Title: "Bytes In", Width: 12},
-		{Title: "Bytes Out", Width: 12},
-		{Title: "Errors", Width: 8},
-		{Title: "Weight", Width: 8},
-	}
-
-	stats_table := table.New(
-		table.WithColumns(stats_columns),
-		table.WithFocused(true),
-		table.WithHeight(20),
-	)
-
-	stats_table.SetStyles(statsTableStyles())
-
-	return stats_table
-}
-
 func main() {
 	cfg := Config{
 		socketPath: "/var/run/haproxy/admin.sock", // default path
@@ -217,7 +137,7 @@ func main() {
 
 	// Initial state
 	m := model{
-		table:     initializeStatsTable(),
+		table:     stats.InitializeTable(),
 		viewport:  viewport.New(80, 20),
 		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions"},
 		activeTab: statsTab,
