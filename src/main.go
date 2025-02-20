@@ -17,12 +17,13 @@ import (
 type tab int
 
 const (
-	statsTab tab = iota
+	statsTab = iota
 	infoTab
 	errorTab
 	poolsTab
 	sessionsTab
 	certsTab
+	threadsTab
 )
 
 type model struct {
@@ -35,6 +36,7 @@ type model struct {
 	errors    string
 	pools     string
 	certs     string
+	threads   string
 	sessions  string
 	err       error
 	lastFetch time.Time
@@ -49,6 +51,7 @@ type (
 	poolsMsg   string
 	sessionMsg string
 	certsMsg   string
+	threadsMsg string
 )
 
 type clearMessageMsg struct{}
@@ -142,7 +145,7 @@ func main() {
 	m := model{
 		table:     stats.InitializeTable(),
 		viewport:  viewport.New(80, 20),
-		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions", "Certs"},
+		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions", "Certs", "Threads"},
 		activeTab: statsTab,
 		config:    cfg,
 	}

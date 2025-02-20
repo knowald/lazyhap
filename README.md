@@ -15,6 +15,8 @@ LazyHAP is a lightweight, portable HAProxy TUI tool written in Go.
   - Errors
   - Memory
   - Sessions
+  - Certs
+  - Threads
 
 ## Status
 
@@ -31,13 +33,13 @@ go build
 
 ## Usage
 
-### Use default HAProxy socket path (`/var/run/haproxy/admin.sock`)
+Use default HAProxy socket path (`/var/run/haproxy/admin.sock`)
 
 ```bash
 ./lazyhap
 ```
 
-### Specify custom socket path
+Specify custom socket path
 
 ```bash
 ./lazyhap /path/to/custom/haproxy/admin.sock
