@@ -2,14 +2,16 @@ package main
 
 import (
 	"fmt"
-	"lazyhap/src/views/certs"
-	"lazyhap/src/views/error"
-	"lazyhap/src/views/info"
-	"lazyhap/src/views/stats"
-	"lazyhap/src/views/threads"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/knowald/lazyhap/src/views/certs"
+	"github.com/knowald/lazyhap/src/views/error"
+	"github.com/knowald/lazyhap/src/views/info"
+	"github.com/knowald/lazyhap/src/views/pools"
+	"github.com/knowald/lazyhap/src/views/sessions"
+	"github.com/knowald/lazyhap/src/views/stats"
+	"github.com/knowald/lazyhap/src/views/threads"
 )
 
 func (m model) View() string {
@@ -30,11 +32,9 @@ func (m model) View() string {
 	case errorTab:
 		error.RenderTab(&sb, m, baseStyle)
 	case poolsTab:
-		// TODO: Separate into package
-		renderPoolsTab(&sb, m)
+		pools.RenderTab(&sb, m, baseStyle)
 	case sessionsTab:
-		// TODO: Separate into package
-		renderSessionsTab(&sb, m)
+		sessions.RenderTab(&sb, m, baseStyle)
 	case certsTab:
 		certs.RenderTab(&sb, m, baseStyle)
 	case threadsTab:
@@ -56,17 +56,6 @@ func renderTabBar(sb *strings.Builder, m model) {
 	}
 	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Left, renderedTabs...))
 	sb.WriteString(renderLastUpdatedTime(m))
-}
-
-// Tabs
-func renderPoolsTab(sb *strings.Builder, m model) {
-	m.viewport.SetContent(m.pools)
-	sb.WriteString(baseStyle.Render(m.viewport.View()))
-}
-
-func renderSessionsTab(sb *strings.Builder, m model) {
-	m.viewport.SetContent(m.sessions)
-	sb.WriteString(baseStyle.Render(m.viewport.View()))
 }
 
 // Timestamp, last updated

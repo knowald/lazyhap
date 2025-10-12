@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"strings"
 
@@ -57,23 +58,29 @@ func setServerWeight(cfg Config, backend, server string, weight int) tea.Cmd {
 	}
 }
 
-type Config struct {
-	socketPath string
-}
-
 func execCommand(cfg Config, cmd string) string {
 	conn, err := net.Dial("unix", cfg.socketPath)
 	if err != nil {
+		log.Printf("Failed to connect to HAProxy socket %s: %v", cfg.socketPath, err)
 		return fmt.Sprintf("Error: %v", err)
 	}
 	defer conn.Close()
 
-	fmt.Fprintf(conn, "%s\n", cmd)
+	_, err = fmt.Fprintf(conn, "%s\n", cmd)
+	if err != nil {
+		log.Printf("Failed to write command to HAProxy socket: %v", err)
+		return fmt.Sprintf("Error: %v", err)
+	}
 
 	var result strings.Builder
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		result.WriteString(scanner.Text() + "\n")
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Printf("Error reading from HAProxy socket: %v", err)
+		return fmt.Sprintf("Error: %v", err)
 	}
 
 	return result.String()

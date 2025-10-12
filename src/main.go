@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"lazyhap/src/views/stats"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/knowald/lazyhap/src/views/stats"
 )
 
 type tab int
@@ -59,11 +60,16 @@ type clearMessageMsg struct{}
 func fetchStats(cfg Config) tea.Msg {
 	conn, err := net.Dial("unix", cfg.socketPath)
 	if err != nil {
+		log.Printf("Failed to connect to HAProxy socket %s: %v", cfg.socketPath, err)
 		return err
 	}
 	defer conn.Close()
 
-	fmt.Fprintf(conn, "show stat\n")
+	_, err = fmt.Fprintf(conn, "show stat\n")
+	if err != nil {
+		log.Printf("Failed to write command to HAProxy socket: %v", err)
+		return err
+	}
 
 	var rows []table.Row
 	scanner := bufio.NewScanner(conn)
@@ -81,7 +87,8 @@ func fetchStats(cfg Config) tea.Msg {
 		}
 
 		fields := strings.Split(line, ",")
-		if len(fields) < 80 {
+		if len(fields) < MinStatsFields {
+			log.Printf("Warning: stats line has only %d fields, expected at least %d", len(fields), MinStatsFields)
 			continue
 		}
 
@@ -104,38 +111,16 @@ func fetchStats(cfg Config) tea.Msg {
 	}
 
 	if err := scanner.Err(); err != nil {
+		log.Printf("Error reading from HAProxy socket: %v", err)
 		return err
 	}
 
 	return rows
 }
 
-func parseInfoToRows(info string) []table.Row {
-	var rows []table.Row
-	lines := strings.Split(info, "\n")
-	for _, line := range lines {
-		// skip empty lines
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		// split on first ':'
-		parts := strings.Split(line, ":")
-		if len(parts) < 2 {
-			continue
-		}
-		// trim the spaces
-		trimmedParts := make([]string, len(parts))
-		for i, part := range parts {
-			trimmedParts[i] = strings.TrimSpace(part)
-		}
-		rows = append(rows, table.Row(trimmedParts))
-	}
-	return rows
-}
-
 func main() {
 	cfg := Config{
-		socketPath: "/var/run/haproxy/admin.sock", // default path
+		socketPath: DefaultSocketPath,
 	}
 	if len(os.Args) > 1 {
 		cfg.socketPath = os.Args[1]
@@ -144,7 +129,7 @@ func main() {
 	// Initial state
 	m := model{
 		table:     stats.InitializeTable(),
-		viewport:  viewport.New(80, 20),
+		viewport:  viewport.New(DefaultViewportWidth, DefaultViewportHeight),
 		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions", "Certs", "Threads"},
 		activeTab: statsTab,
 		config:    cfg,

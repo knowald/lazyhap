@@ -5,6 +5,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const defaultTableHeight = 20
+
 func InitializeTable() table.Model {
 	columns := []table.Column{
 		{Title: "Name", Width: 40},
@@ -22,7 +24,7 @@ func InitializeTable() table.Model {
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithFocused(true),
-		table.WithHeight(20),
+		table.WithHeight(defaultTableHeight),
 	)
 
 	t.SetStyles(tableStyles())

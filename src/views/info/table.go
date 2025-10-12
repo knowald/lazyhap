@@ -4,7 +4,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
 )
+
+const defaultTableHeight = 20
 
 func InitializeTable() table.Model {
 	columns := []table.Column{
@@ -16,7 +19,7 @@ func InitializeTable() table.Model {
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithFocused(true),
-		table.WithHeight(20),
+		table.WithHeight(defaultTableHeight),
 	)
 
 	t.SetStyles(tableStyles())
@@ -44,7 +47,16 @@ func ParseInfoToRows(info string) []table.Row {
 }
 
 func tableStyles() table.Styles {
-	// Move your statsTableStyles() function content here
-	// You'll need to add the actual styles implementation
-	return table.DefaultStyles()
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(true).
+		Foreground(lipgloss.Color("205"))
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("229")).
+		Background(lipgloss.Color("57")).
+		Bold(false)
+	return s
 }

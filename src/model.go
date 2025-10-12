@@ -1,13 +1,13 @@
 package main
 
 import (
-	"lazyhap/src/views/info"
-	"lazyhap/src/views/stats"
 	"time"
 
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/knowald/lazyhap/src/views/info"
+	"github.com/knowald/lazyhap/src/views/stats"
 )
 
 func (m model) Init() tea.Cmd {
@@ -42,7 +42,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case error:
 		m.err = msg
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(RetryConnectionDelay, func(t time.Time) tea.Msg {
 			return fetchStats(m.config)
 		})
 
@@ -51,47 +51,47 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastFetch = time.Now()
 			m.table.SetRows(msg)
 		}
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(RefreshInterval, func(t time.Time) tea.Msg {
 			return fetchStats(m.config)
 		})
 
 	case infoMsg:
 		m.info = string(msg)
 		if m.activeTab == infoTab {
-			rows := parseInfoToRows(m.info)
+			rows := info.ParseInfoToRows(m.info)
 			m.table.SetRows(rows)
 		}
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(RefreshInterval, func(t time.Time) tea.Msg {
 			return fetchInfo(m.config)
 		})
 
 	case errorMsg:
 		m.errors = string(msg)
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(RefreshInterval, func(t time.Time) tea.Msg {
 			return fetchErrors(m.config)
 		})
 
 	case poolsMsg:
 		m.pools = string(msg)
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(RefreshInterval, func(t time.Time) tea.Msg {
 			return fetchPools(m.config)
 		})
 
 	case sessionMsg:
 		m.sessions = string(msg)
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(RefreshInterval, func(t time.Time) tea.Msg {
 			return fetchSessions(m.config)
 		})
 
 	case certsMsg:
 		m.certs = string(msg)
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(RefreshInterval, func(t time.Time) tea.Msg {
 			return fetchCerts(m.config)
 		})
 
 	case threadsMsg:
 		m.threads = string(msg)
-		return m, tea.Tick(5*time.Second, func(t time.Time) tea.Msg {
+		return m, tea.Tick(RefreshInterval, func(t time.Time) tea.Msg {
 			return fetchThreads(m.config)
 		})
 
@@ -132,7 +132,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					backend := selectedRow[0]
 					server := selectedRow[1]
 					if server != "FRONTEND" && server != "BACKEND" {
-						return m, setServerWeight(m.config, backend, server, 100)
+						return m, setServerWeight(m.config, backend, server, DefaultServerWeight)
 					}
 				}
 			}
@@ -141,9 +141,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeTab = tab((int(m.activeTab) + 1) % len(m.tabs))
 			if m.activeTab == infoTab {
 				m.table = info.InitializeTable()
-				rows := parseInfoToRows(m.info)
+				rows := info.ParseInfoToRows(m.info)
 				m.table.SetRows(rows)
-				m.viewport.SetContent(m.info)
 				return m, nil
 			} else if m.activeTab == statsTab {
 				oldRows := m.table.Rows()
@@ -163,9 +162,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeTab = tab((int(m.activeTab) - 1 + len(m.tabs)) % len(m.tabs))
 			if m.activeTab == infoTab {
 				m.table = info.InitializeTable()
-				rows := parseInfoToRows(m.info)
+				rows := info.ParseInfoToRows(m.info)
 				m.table.SetRows(rows)
-				m.viewport.SetContent(m.info)
 				return m, nil
 			} else if m.activeTab == statsTab {
 				oldRows := m.table.Rows()
@@ -190,7 +188,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.err = err
 					} else {
 						m.message = "✓ Copied to clipboard!"
-						return m, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+						return m, tea.Tick(MessageDisplayTime, func(t time.Time) tea.Msg {
 							return clearMessageMsg{}
 						})
 					}
@@ -239,4 +237,12 @@ func (m model) CertsView() string {
 
 func (m model) ThreadsView() string {
 	return m.threads
+}
+
+func (m model) PoolsView() string {
+	return m.pools
+}
+
+func (m model) SessionsView() string {
+	return m.sessions
 }

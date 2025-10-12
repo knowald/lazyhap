@@ -1,4 +1,4 @@
-module lazyhap
+module github.com/knowald/lazyhap
 
 go 1.23.5
 
