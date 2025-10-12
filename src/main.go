@@ -28,22 +28,26 @@ const (
 )
 
 type model struct {
-	table     table.Model
-	message   string
-	viewport  viewport.Model
-	activeTab tab
-	tabs      []string
-	info      string
-	errors    string
-	pools     string
-	certs     string
-	threads   string
-	sessions  string
-	err       error
-	lastFetch time.Time
-	width     int
-	height    int
-	config    Config
+	table        table.Model
+	message      string
+	viewport     viewport.Model
+	activeTab    tab
+	tabs         []string
+	info         string
+	errors       string
+	pools        string
+	certs        string
+	threads      string
+	sessions     string
+	err          error
+	lastFetch    time.Time
+	width        int
+	height       int
+	config       Config
+	showHelp     bool
+	filterMode   bool
+	filterInput  string
+	allStatsRows []table.Row // Store all rows for filtering
 }
 
 type (
@@ -93,17 +97,15 @@ func fetchStats(cfg Config) tea.Msg {
 		}
 
 		row := table.Row{
-			// truncate(fields[0], 18), // Name
-			// truncate(fields[1], 13), // Server
 			fields[0],              // Name
 			fields[1],              // Server
-			fields[17],             // Status
+			fields[17],             // Status (will be colored by custom renderer)
 			fields[4],              // Current Sessions
 			fields[5],              // Max Sessions
 			fields[7],              // Total Sessions
 			formatBytes(fields[8]), // Bytes In
 			formatBytes(fields[9]), // Bytes Out
-			fields[13],             // Errors
+			fields[13],             // Errors (will be colored by custom renderer)
 			fields[18],             // Weight
 		}
 
@@ -119,9 +121,14 @@ func fetchStats(cfg Config) tea.Msg {
 }
 
 func main() {
+	// Load config from file
+	appConfig := LoadConfig()
+
 	cfg := Config{
-		socketPath: DefaultSocketPath,
+		socketPath: appConfig.SocketPath,
 	}
+
+	// Command-line argument overrides config file
 	if len(os.Args) > 1 {
 		cfg.socketPath = os.Args[1]
 	}

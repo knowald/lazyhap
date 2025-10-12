@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/lipgloss"
 	exec "os/exec"
 )
 
@@ -50,4 +52,95 @@ func copyToClipboard(text string) error {
 
 	cmd.Stdin = strings.NewReader(text)
 	return cmd.Run()
+}
+
+// colorizeStatus returns a color-coded status string
+func colorizeStatus(status string) string {
+	var style lipgloss.Style
+
+	switch status {
+	case "UP":
+		style = lipgloss.NewStyle().Foreground(lipgloss.Color("2")) // Green
+	case "DOWN":
+		style = lipgloss.NewStyle().Foreground(lipgloss.Color("1")) // Red
+	case "MAINT":
+		style = lipgloss.NewStyle().Foreground(lipgloss.Color("3")) // Yellow
+	case "DRAIN":
+		style = lipgloss.NewStyle().Foreground(lipgloss.Color("6")) // Cyan
+	case "NOLB":
+		style = lipgloss.NewStyle().Foreground(lipgloss.Color("5")) // Magenta
+	default:
+		style = lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // Gray
+	}
+
+	return style.Render(status)
+}
+
+// colorizeErrors returns a color-coded error count
+func colorizeErrors(errors string) string {
+	if errors == "" || errors == "0" {
+		return errors
+	}
+
+	// Parse error count
+	var errorCount int64
+	fmt.Sscanf(errors, "%d", &errorCount)
+
+	var style lipgloss.Style
+	if errorCount == 0 {
+		style = lipgloss.NewStyle() // Default
+	} else if errorCount < 10 {
+		style = lipgloss.NewStyle().Foreground(lipgloss.Color("3")) // Yellow for low errors
+	} else {
+		style = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true) // Bold red for high errors
+	}
+
+	return style.Render(errors)
+}
+
+// filterRows filters table rows based on search query
+func filterRows(rows []table.Row, query string) []table.Row {
+	if query == "" {
+		return rows
+	}
+
+	query = strings.ToLower(query)
+	var filtered []table.Row
+
+	for _, row := range rows {
+		// Search in name, server, and status columns
+		for _, cell := range row {
+			// Remove ANSI color codes for searching
+			plainCell := stripANSI(cell)
+			if strings.Contains(strings.ToLower(plainCell), query) {
+				filtered = append(filtered, row)
+				break
+			}
+		}
+	}
+
+	return filtered
+}
+
+// stripANSI removes ANSI escape codes from a string
+func stripANSI(s string) string {
+	// Simple ANSI stripper - looks for ESC sequences
+	var result strings.Builder
+	inEscape := false
+
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\x1b' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= 'a' && s[i] <= 'z') {
+				inEscape = false
+			}
+			continue
+		}
+		result.WriteByte(s[i])
+	}
+
+	return result.String()
 }

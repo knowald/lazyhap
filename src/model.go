@@ -49,7 +49,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case []table.Row:
 		if m.activeTab == statsTab {
 			m.lastFetch = time.Now()
-			m.table.SetRows(msg)
+			m.allStatsRows = msg
+
+			// Apply filter if active
+			if m.filterMode && m.filterInput != "" {
+				m.table.SetRows(filterRows(msg, m.filterInput))
+			} else {
+				m.table.SetRows(msg)
+			}
 		}
 		return m, tea.Tick(RefreshInterval, func(t time.Time) tea.Msg {
 			return fetchStats(m.config)
@@ -100,9 +107,53 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		// Handle filter input first
+		if m.filterMode && m.activeTab == statsTab {
+			switch msg.String() {
+			case "enter":
+				m.filterMode = false
+				return m, nil
+			case "esc":
+				m.filterMode = false
+				m.filterInput = ""
+				m.table.SetRows(m.allStatsRows)
+				return m, nil
+			case "backspace":
+				if len(m.filterInput) > 0 {
+					m.filterInput = m.filterInput[:len(m.filterInput)-1]
+					m.table.SetRows(filterRows(m.allStatsRows, m.filterInput))
+				}
+				return m, nil
+			default:
+				// Add character to filter
+				if len(msg.String()) == 1 {
+					m.filterInput += msg.String()
+					m.table.SetRows(filterRows(m.allStatsRows, m.filterInput))
+				}
+				return m, nil
+			}
+		}
+
 		switch msg.String() {
+		case "/":
+			if m.activeTab == statsTab {
+				m.filterMode = true
+				m.filterInput = ""
+				return m, nil
+			}
+		case "?":
+			m.showHelp = !m.showHelp
+			return m, nil
 		case "q", "ctrl+c", "esc":
+			if m.showHelp {
+				m.showHelp = false
+				return m, nil
+			}
 			return m, tea.Quit
+		case "j", "down":
+			// Forward to table/viewport for navigation
+		case "k", "up":
+			// Forward to table/viewport for navigation
 		case "D", "d":
 			if m.activeTab == statsTab {
 				selectedRow := m.table.SelectedRow()
@@ -135,6 +186,33 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, setServerWeight(m.config, backend, server, DefaultServerWeight)
 					}
 				}
+			}
+		case "1", "2", "3", "4", "5", "6", "7":
+			// Quick jump to tab by number
+			tabNum := int(msg.String()[0] - '1')
+			if tabNum >= 0 && tabNum < len(m.tabs) {
+				previousTab := m.activeTab
+				m.activeTab = tab(tabNum)
+
+				// Handle tab switching logic
+				if m.activeTab == infoTab {
+					m.table = info.InitializeTable()
+					rows := info.ParseInfoToRows(m.info)
+					m.table.SetRows(rows)
+					return m, nil
+				} else if m.activeTab == statsTab {
+					oldRows := m.table.Rows()
+					m.table = stats.InitializeTable()
+					if len(oldRows) > 0 {
+						m.table.SetRows(oldRows)
+					}
+					if previousTab != statsTab {
+						return m, func() tea.Msg {
+							return fetchStats(m.config)
+						}
+					}
+				}
+				return m, nil
 			}
 		case "tab", "right", "l":
 			previousTab := m.activeTab
@@ -245,4 +323,16 @@ func (m model) PoolsView() string {
 
 func (m model) SessionsView() string {
 	return m.sessions
+}
+
+func (m model) FilterMode() bool {
+	return m.filterMode
+}
+
+func (m model) FilterInput() string {
+	return m.filterInput
+}
+
+func (m model) GetTable() table.Model {
+	return m.table
 }

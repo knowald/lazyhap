@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/knowald/lazyhap/src/views/certs"
 	"github.com/knowald/lazyhap/src/views/error"
+	"github.com/knowald/lazyhap/src/views/help"
 	"github.com/knowald/lazyhap/src/views/info"
 	"github.com/knowald/lazyhap/src/views/pools"
 	"github.com/knowald/lazyhap/src/views/sessions"
@@ -15,6 +16,10 @@ import (
 )
 
 func (m model) View() string {
+	if m.showHelp {
+		return help.RenderHelp()
+	}
+
 	if m.err != nil {
 		return fmt.Sprintf("\nError: %v\n\nPress q to quit\n", m.err)
 	}
