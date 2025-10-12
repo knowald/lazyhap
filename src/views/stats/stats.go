@@ -24,9 +24,13 @@ func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 
 	if m.FilterMode() {
 		filterStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
-		sb.WriteString(filterStyle.Render("Filter: " + m.FilterInput() + "█"))
+		sb.WriteString(filterStyle.Render("🔍 Filter: " + m.FilterInput() + "█"))
+		sb.WriteString(" ")
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+		sb.WriteString(hintStyle.Render("(enter: apply  esc: clear)"))
 	} else {
-		sb.WriteString("Commands: (d)isable, (e)nable, set (w)eight to 100, (/) filter")
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+		sb.WriteString(hintStyle.Render("d: disable  e: enable  w: weight  /: filter  ?: help  1-7: jump tabs"))
 	}
 }
 

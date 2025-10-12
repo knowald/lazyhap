@@ -17,6 +17,7 @@ func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 	if message := m.GetMessage(); message != "" {
 		sb.WriteString(message)
 	} else {
-		sb.WriteString("Commands: (y) to yank value to clipboard")
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+		sb.WriteString(hintStyle.Render("y: copy value  ?: help  1-7: jump tabs"))
 	}
 }

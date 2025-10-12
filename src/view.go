@@ -65,5 +65,8 @@ func renderTabBar(sb *strings.Builder, m model) {
 
 // Timestamp, last updated
 func renderLastUpdatedTime(m model) string {
-	return timeStyle.Render(fmt.Sprintf("Last updated: %s", m.lastFetch.Format("15:04:05")))
+	timestamp := timeStyle.Render(fmt.Sprintf("Updated: %s", m.lastFetch.Format("15:04:05")))
+	hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241")).MarginLeft(2)
+	hint := hintStyle.Render("Press ? for help")
+	return timestamp + hint
 }
