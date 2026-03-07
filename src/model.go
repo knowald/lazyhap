@@ -3,9 +3,9 @@ package main
 import (
 	"time"
 
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/table"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/knowald/lazyhap/src/views/info"
 	"github.com/knowald/lazyhap/src/views/stats"
 )
@@ -33,12 +33,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		headerHeight := 4
 		footerHeight := 2
-		m.viewport.Height = m.height - headerHeight - footerHeight
-		m.viewport.Width = m.width - 4
+		m.viewport.SetHeight(m.height - headerHeight - footerHeight)
+		m.viewport.SetWidth(m.width - 4)
 
 		m.table.SetHeight(m.height - headerHeight - footerHeight)
-
-		return m, nil
+		m.table.SetWidth(m.width - 4)
 
 	case error:
 		m.err = msg
@@ -106,7 +105,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.message = ""
 		return m, nil
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		// Handle filter input first
 		if m.filterMode && m.activeTab == statsTab {
 			switch msg.String() {
@@ -197,12 +196,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Handle tab switching logic
 				if m.activeTab == infoTab {
 					m.table = info.InitializeTable()
+					m.applyTableSize()
 					rows := info.ParseInfoToRows(m.info)
 					m.table.SetRows(rows)
 					return m, nil
 				} else if m.activeTab == statsTab {
 					oldRows := m.table.Rows()
 					m.table = stats.InitializeTable()
+					m.applyTableSize()
 					if len(oldRows) > 0 {
 						m.table.SetRows(oldRows)
 					}
@@ -219,12 +220,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeTab = tab((int(m.activeTab) + 1) % len(m.tabs))
 			if m.activeTab == infoTab {
 				m.table = info.InitializeTable()
+				m.applyTableSize()
 				rows := info.ParseInfoToRows(m.info)
 				m.table.SetRows(rows)
 				return m, nil
 			} else if m.activeTab == statsTab {
 				oldRows := m.table.Rows()
 				m.table = stats.InitializeTable()
+				m.applyTableSize()
 				if len(oldRows) > 0 {
 					m.table.SetRows(oldRows)
 				}
@@ -240,12 +243,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeTab = tab((int(m.activeTab) - 1 + len(m.tabs)) % len(m.tabs))
 			if m.activeTab == infoTab {
 				m.table = info.InitializeTable()
+				m.applyTableSize()
 				rows := info.ParseInfoToRows(m.info)
 				m.table.SetRows(rows)
 				return m, nil
 			} else if m.activeTab == statsTab {
 				oldRows := m.table.Rows()
 				m.table = stats.InitializeTable()
+				m.applyTableSize()
 				if len(oldRows) > 0 {
 					m.table.SetRows(oldRows)
 				}
@@ -285,6 +290,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Batch(cmds...)
+}
+
+func (m *model) applyTableSize() {
+	headerHeight := 4
+	footerHeight := 2
+	m.table.SetHeight(m.height - headerHeight - footerHeight)
+	m.table.SetWidth(m.width - 4)
 }
 
 // Model get/set

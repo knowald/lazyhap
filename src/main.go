@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/table"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 	"github.com/knowald/lazyhap/src/views/stats"
 )
 
@@ -99,13 +99,13 @@ func fetchStats(cfg Config) tea.Msg {
 		row := table.Row{
 			fields[0],              // Name
 			fields[1],              // Server
-			fields[17],             // Status (will be colored by custom renderer)
+			fields[17],             // Status
 			fields[4],              // Current Sessions
 			fields[5],              // Max Sessions
 			fields[7],              // Total Sessions
 			formatBytes(fields[8]), // Bytes In
 			formatBytes(fields[9]), // Bytes Out
-			fields[13],             // Errors (will be colored by custom renderer)
+			fields[13],             // Errors
 			fields[18],             // Weight
 		}
 
@@ -134,18 +134,19 @@ func main() {
 	}
 
 	// Initial state
+	vp := viewport.New()
+	vp.SetWidth(DefaultViewportWidth)
+	vp.SetHeight(DefaultViewportHeight)
+
 	m := model{
 		table:     stats.InitializeTable(),
-		viewport:  viewport.New(DefaultViewportWidth, DefaultViewportHeight),
+		viewport:  vp,
 		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions", "Certs", "Threads"},
 		activeTab: statsTab,
 		config:    cfg,
 	}
 
-	p := tea.NewProgram(
-		m,
-		tea.WithAltScreen(),
-	)
+	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running program: %v\n", err)
 	}

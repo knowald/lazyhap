@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/knowald/lazyhap/src/views/certs"
 	"github.com/knowald/lazyhap/src/views/error"
 	"github.com/knowald/lazyhap/src/views/help"
@@ -15,38 +16,42 @@ import (
 	"github.com/knowald/lazyhap/src/views/threads"
 )
 
-func (m model) View() string {
+func (m model) View() tea.View {
+	var content string
+
 	if m.showHelp {
-		return help.RenderHelp()
+		content = help.RenderHelp()
+	} else if m.err != nil {
+		content = fmt.Sprintf("\nError: %v\n\nPress q to quit\n", m.err)
+	} else {
+		var sb strings.Builder
+
+		renderTabBar(&sb, m)
+		sb.WriteString("\n\n")
+
+		switch m.activeTab {
+		case statsTab:
+			stats.RenderTab(&sb, m, baseStyle)
+		case infoTab:
+			info.RenderTab(&sb, m, baseStyle)
+		case errorTab:
+			error.RenderTab(&sb, m, baseStyle)
+		case poolsTab:
+			pools.RenderTab(&sb, m, baseStyle)
+		case sessionsTab:
+			sessions.RenderTab(&sb, m, baseStyle)
+		case certsTab:
+			certs.RenderTab(&sb, m, baseStyle)
+		case threadsTab:
+			threads.RenderTab(&sb, m, baseStyle)
+		}
+
+		content = sb.String()
 	}
 
-	if m.err != nil {
-		return fmt.Sprintf("\nError: %v\n\nPress q to quit\n", m.err)
-	}
-
-	var sb strings.Builder
-
-	renderTabBar(&sb, m)
-	sb.WriteString("\n\n")
-
-	switch m.activeTab {
-	case statsTab:
-		stats.RenderTab(&sb, m, baseStyle)
-	case infoTab:
-		info.RenderTab(&sb, m, baseStyle)
-	case errorTab:
-		error.RenderTab(&sb, m, baseStyle)
-	case poolsTab:
-		pools.RenderTab(&sb, m, baseStyle)
-	case sessionsTab:
-		sessions.RenderTab(&sb, m, baseStyle)
-	case certsTab:
-		certs.RenderTab(&sb, m, baseStyle)
-	case threadsTab:
-		threads.RenderTab(&sb, m, baseStyle)
-	}
-
-	return sb.String()
+	v := tea.NewView(content)
+	v.AltScreen = true
+	return v
 }
 
 // Navigation header

@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 )
 
 // ColorizeSessionOutput adds syntax highlighting to session output

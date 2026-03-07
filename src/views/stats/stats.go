@@ -1,11 +1,11 @@
 package stats
 
 import (
-	"fmt"
 	"strings"
+	"unicode/utf8"
 
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/table"
+	"charm.land/lipgloss/v2"
 )
 
 type Model interface {
@@ -17,14 +17,13 @@ type Model interface {
 }
 
 func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
-	// Get the table and render with colorization
 	tbl := m.GetTable()
 	sb.WriteString(baseStyle.Render(renderColorizedTable(tbl)))
 	sb.WriteString("\n")
 
 	if m.FilterMode() {
 		filterStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
-		sb.WriteString(filterStyle.Render("🔍 Filter: " + m.FilterInput() + "█"))
+		sb.WriteString(filterStyle.Render("Filter: " + m.FilterInput() + "█"))
 		sb.WriteString(" ")
 		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 		sb.WriteString(hintStyle.Render("(enter: apply  esc: clear)"))
@@ -34,21 +33,50 @@ func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 	}
 }
 
-// renderColorizedTable renders the table with status and error colorization
+const (
+	statusColIndex = 2
+	errorsColIndex = 8
+	cellPadding    = 2 // Padding(0, 1) adds 1 char on each side
+)
+
+// renderColorizedTable post-processes the rendered table output, injecting
+// foreground-only ANSI codes into the Status and Errors columns. Uses raw SGR
+// sequences (\e[XXm ... \e[39m) instead of lipgloss to avoid full-reset codes
+// that would break the selected row's background highlight.
 func renderColorizedTable(tbl table.Model) string {
-	// Get the base table view
 	tableView := tbl.View()
+	cols := tbl.Columns()
+	if len(cols) <= errorsColIndex {
+		return tableView
+	}
 
-	// Apply colorization to status and error columns in each row
+	// Calculate the visible character offset where each column starts.
+	// Each cell is rendered at col.Width + cellPadding visible chars.
+	statusStart := 0
+	for i := 0; i < statusColIndex; i++ {
+		statusStart += cols[i].Width + cellPadding
+	}
+	statusEnd := statusStart + cols[statusColIndex].Width + cellPadding
+
+	errorsStart := 0
+	for i := 0; i < errorsColIndex; i++ {
+		errorsStart += cols[i].Width + cellPadding
+	}
+	errorsEnd := errorsStart + cols[errorsColIndex].Width + cellPadding
+
 	lines := strings.Split(tableView, "\n")
-	var result strings.Builder
 
+	// headersView() produces 2 lines (header text + border from BorderBottom),
+	// then View() adds "\n" before viewport content. Data rows start at index 2.
+	const dataStart = 2
+
+	var result strings.Builder
 	for i, line := range lines {
-		if i < 2 { // Header rows
-			result.WriteString(line)
-		} else {
-			result.WriteString(colorizeTableRow(line))
+		if i >= dataStart {
+			line = colorizeCellRange(line, statusStart, statusEnd, statusColor)
+			line = colorizeCellRange(line, errorsStart, errorsEnd, errorsColor)
 		}
+		result.WriteString(line)
 		if i < len(lines)-1 {
 			result.WriteString("\n")
 		}
@@ -57,116 +85,142 @@ func renderColorizedTable(tbl table.Model) string {
 	return result.String()
 }
 
-// colorizeTableRow colorizes status (column 3) and errors (column 9) in a table row
-func colorizeTableRow(row string) string {
-	// Parse the row to find column positions while preserving spacing
-	// We need to identify the status and error columns and colorize them in place
+// colorizeCellRange injects a foreground ANSI color into the cell at the given
+// visible-character range. colorFn inspects the trimmed cell value and returns
+// an ANSI SGR color code (e.g. "32" for green), or "" to skip colorization.
+func colorizeCellRange(line string, visStart, visEnd int, colorFn func(string) string) string {
+	// Walk the line tracking visible character count vs byte position,
+	// skipping over ANSI escape sequences.
+	byteStart := visibleToBytePos(line, visStart)
+	byteEnd := visibleToBytePos(line, visEnd)
 
-	// Find all non-space sequences (columns) and their positions
-	type columnPos struct {
-		start int
-		end   int
-		value string
+	if byteStart >= len(line) {
+		return line
+	}
+	if byteEnd > len(line) {
+		byteEnd = len(line)
 	}
 
-	var columns []columnPos
-	inColumn := false
-	start := 0
-
-	for i, ch := range row {
-		if ch != ' ' {
-			if !inColumn {
-				inColumn = true
-				start = i
-			}
-		} else {
-			if inColumn {
-				columns = append(columns, columnPos{start, i, row[start:i]})
-				inColumn = false
-			}
-		}
-	}
-	if inColumn {
-		columns = append(columns, columnPos{start, len(row), row[start:]})
+	cell := line[byteStart:byteEnd]
+	plain := stripANSI(cell)
+	value := strings.TrimSpace(plain)
+	if value == "" {
+		return line
 	}
 
-	if len(columns) < 10 {
-		return row
+	sgr := colorFn(value)
+	if sgr == "" {
+		return line
 	}
 
-	// Colorize status (column index 2) and errors (column index 8)
-	// Build the result by replacing values while preserving spacing
-	result := []byte(row)
+	// Find the value within the plain cell text and convert the byte offset
+	// to a rune offset, since visibleToBytePos counts runes not bytes.
+	valByteOffset := strings.Index(plain, value)
+	if valByteOffset < 0 {
+		return line
+	}
+	valRuneOffset := utf8.RuneCountInString(plain[:valByteOffset])
+	valRuneLen := utf8.RuneCountInString(value)
 
-	// Colorize status column (index 2)
-	statusCol := columns[2]
-	colorizedStatus := colorizeStatus(statusCol.value)
-	result = replaceInPlace(result, statusCol.start, statusCol.end, colorizedStatus)
+	// Map the value's rune start/end to byte positions within the cell
+	valByteStart := byteStart + visibleToBytePos(cell, valRuneOffset)
+	valByteEnd := byteStart + visibleToBytePos(cell, valRuneOffset+valRuneLen)
 
-	// Colorize errors column (index 8) - adjust for any length change from status colorization
-	errorsCol := columns[8]
-	lenDiff := len(colorizedStatus) - len(statusCol.value)
-	colorizedErrors := colorizeErrors(errorsCol.value)
-	result = replaceInPlace(result, errorsCol.start+lenDiff, errorsCol.end+lenDiff, colorizedErrors)
-
-	return string(result)
+	// Inject foreground-only SGR: \e[XXm before, \e[39m after (default fg reset).
+	// This avoids \e[0m which would kill the Selected row's background.
+	var out strings.Builder
+	out.WriteString(line[:valByteStart])
+	out.WriteString(sgr)
+	out.WriteString(line[valByteStart:valByteEnd])
+	out.WriteString("\x1b[39m")
+	out.WriteString(line[valByteEnd:])
+	return out.String()
 }
 
-// replaceInPlace replaces a substring with a colored version, handling ANSI codes
-func replaceInPlace(row []byte, start, end int, replacement string) []byte {
-	before := row[:start]
-	after := row[end:]
-
-	// Build new row
-	var result []byte
-	result = append(result, before...)
-	result = append(result, []byte(replacement)...)
-	result = append(result, after...)
-
-	return result
-}
-
-func colorizeStatus(status string) string {
-	var style lipgloss.Style
-
+// statusColor returns an ANSI SGR foreground sequence for the given status, or "".
+func statusColor(status string) string {
 	switch status {
 	case "UP":
-		style = lipgloss.NewStyle().Foreground(lipgloss.Color("2")) // Green
+		return "\x1b[32m" // green
 	case "DOWN":
-		style = lipgloss.NewStyle().Foreground(lipgloss.Color("1")) // Red
+		return "\x1b[31m" // red
 	case "MAINT":
-		style = lipgloss.NewStyle().Foreground(lipgloss.Color("3")) // Yellow
+		return "\x1b[33m" // yellow
 	case "DRAIN":
-		style = lipgloss.NewStyle().Foreground(lipgloss.Color("6")) // Cyan
+		return "\x1b[36m" // cyan
 	case "NOLB":
-		style = lipgloss.NewStyle().Foreground(lipgloss.Color("5")) // Magenta
+		return "\x1b[35m" // magenta
 	default:
-		return status
+		return ""
 	}
-
-	return style.Render(status)
 }
 
-func colorizeErrors(errors string) string {
+// errorsColor returns an ANSI SGR foreground sequence for the given error count, or "".
+func errorsColor(errors string) string {
 	if errors == "" || errors == "0" {
-		return errors
+		return ""
 	}
-
-	// Parse error count
-	var errorCount int64
-	_, err := fmt.Sscanf(errors, "%d", &errorCount)
-	if err != nil {
-		return errors
+	var n int64
+	for _, c := range errors {
+		if c >= '0' && c <= '9' {
+			n = n*10 + int64(c-'0')
+		} else {
+			return ""
+		}
 	}
-
-	var style lipgloss.Style
-	if errorCount == 0 {
-		return errors
-	} else if errorCount < 10 {
-		style = lipgloss.NewStyle().Foreground(lipgloss.Color("3")) // Yellow
-	} else {
-		style = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true) // Bold red
+	if n == 0 {
+		return ""
 	}
+	if n < 10 {
+		return "\x1b[33m" // yellow
+	}
+	return "\x1b[1;31m" // bold red
+}
 
-	return style.Render(errors)
+// visibleToBytePos maps a visible rune position (ignoring ANSI escapes)
+// to the corresponding byte position in s.
+func visibleToBytePos(s string, visPos int) int {
+	visible := 0
+	inEscape := false
+	for i := 0; i < len(s); {
+		if visible == visPos && !inEscape {
+			return i
+		}
+		if s[i] == '\x1b' {
+			inEscape = true
+			i++
+			continue
+		}
+		if inEscape {
+			if (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= 'a' && s[i] <= 'z') {
+				inEscape = false
+			}
+			i++
+			continue
+		}
+		_, size := utf8.DecodeRuneInString(s[i:])
+		i += size
+		visible++
+	}
+	return len(s)
+}
+
+// stripANSI removes ANSI escape codes from a string.
+func stripANSI(s string) string {
+	var result strings.Builder
+	inEscape := false
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\x1b' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if (s[i] >= 'A' && s[i] <= 'Z') || (s[i] >= 'a' && s[i] <= 'z') {
+				inEscape = false
+			}
+			continue
+		}
+		result.WriteByte(s[i])
+	}
+	return result.String()
 }

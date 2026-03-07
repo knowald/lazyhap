@@ -7,7 +7,7 @@ import (
 	"net"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 )
 
 func fetchInfo(cfg Config) tea.Msg {

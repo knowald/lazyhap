@@ -3,8 +3,8 @@ package info
 import (
 	"strings"
 
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/table"
+	"charm.land/lipgloss/v2"
 )
 
 const defaultTableHeight = 20

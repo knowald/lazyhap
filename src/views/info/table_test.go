@@ -3,7 +3,7 @@ package info
 import (
 	"testing"
 
-	"github.com/charmbracelet/bubbles/table"
+	"charm.land/bubbles/v2/table"
 )
 
 func TestParseInfoToRows(t *testing.T) {
