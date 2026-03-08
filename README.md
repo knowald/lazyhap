@@ -1,58 +1,40 @@
 # LazyHAP
 
-## Overview
-
-LazyHAP is a lightweight, portable HAProxy TUI tool written in Go.
+A terminal UI for monitoring and managing HAProxy servers via Unix socket.
 
 ![Screenshot](screenshot.png)
 
 ## Features
 
-- Real-time HAProxy server statistics with auto-refresh
-- **Color-coded server status** (UP/DOWN/MAINT/DRAIN/NOLB)
-- **Interactive filtering** in Stats tab (press `/` to search)
-- **Quick navigation** with vim-style keys and number shortcuts
-- **Built-in help system** (press `?`)
-- **Config file support** for persistent preferences
-- Multiple tab views:
-  - Stats (with server control and filtering)
-  - Info (with clipboard copy support)
-  - Errors
-  - Memory
-  - Sessions
-  - Certs
-  - Threads
+- 9 tabbed views: Stats, Info, Errors, Memory, Sessions, Certs, Threads, Activity, Events
+- Color-coded server status (UP/DOWN/MAINT/DRAIN/NOLB) and error counts
+- Server control: disable, drain, enable, ready, kill sessions, set weight, clear counters
+- Column sorting in Stats tab
+- Filtering/search across all tabs
+- Vim-style navigation with number key tab jumping (1-9)
+- Connection status indicator
+- Clipboard copy support
+- Config file for persistent settings
 
-## Status
-
-🚧 Early Prototype 🚧
-
-- Experimental implementation
-- Subject to significant changes
-
-## Build
+## Install
 
 ```bash
-go build
+go build -o lazyhap ./src/
 ```
 
 ## Usage
 
-Use default HAProxy socket path (`/var/run/haproxy/admin.sock`)
-
 ```bash
+# Default socket path (/var/run/haproxy/admin.sock)
 ./lazyhap
+
+# Custom socket path
+./lazyhap /path/to/haproxy/admin.sock
 ```
 
-Specify custom socket path
+### Configuration
 
-```bash
-./lazyhap /path/to/custom/haproxy/admin.sock
-```
-
-### Configuration File
-
-LazyHAP supports optional configuration via `~/.config/lazyhap/config.json`:
+Optional config at `~/.config/lazyhap/config.json`:
 
 ```json
 {
@@ -61,49 +43,47 @@ LazyHAP supports optional configuration via `~/.config/lazyhap/config.json`:
 }
 ```
 
-Command-line arguments override config file settings.
+Command-line arguments take precedence.
+
+### Remote socket via SSH
+
+```bash
+ssh -L ./admin.sock:/var/run/haproxy/admin.sock user@remote-host
+./lazyhap ./admin.sock
+```
 
 ## Controls
 
-### Navigation
-- `tab`/`shift+tab` or `left`/`right`/`h`/`l`: Navigate tabs
-- `1-7`: Quick jump to tab by number
-- `j`/`k` or `up`/`down`: Navigate within tables
-- `?`: Toggle help screen
-- `q`/`esc`/`ctrl+c`: Quit
+| Key | Action |
+|-----|--------|
+| `tab`/`shift+tab`, `h`/`l` | Switch tabs |
+| `1-9` | Jump to tab |
+| `j`/`k` | Navigate rows |
+| `g`/`G` | Go to top/bottom |
+| `/` | Filter/search |
+| `r` | Refresh current tab |
+| `y` | Copy to clipboard |
+| `s` | Cycle sort column (Stats) |
+| `?` | Help |
+| `q` | Quit |
 
-### Stats Tab Commands
-- `/`: Start filtering (type to search, Enter to apply, Esc to clear)
-- `d`: Disable selected server
-- `e`: Enable selected server
-- `w`: Set server weight to 100
+### Stats tab
 
-### Info Tab Commands
-- `y`: Yank (copy) selected value to clipboard
-
-### Visual Indicators
-- **Green** status: Server is UP
-- **Red** status: Server is DOWN
-- **Yellow** status: Server in MAINT mode
-- **Cyan** status: Server is DRAIN
-- **Magenta** status: Server is NOLB
-- **Yellow** errors: Low error count (< 10)
-- **Bold Red** errors: High error count (≥ 10)
+| Key | Action |
+|-----|--------|
+| `d` | Disable server |
+| `D` | Drain server |
+| `e` | Enable server |
+| `R` | Set server ready |
+| `w` | Set weight (input popup) |
+| `x` | Kill sessions (confirm) |
+| `c` | Clear counters |
 
 ## Requirements
 
-- HAProxy
-- Unix-like system with socket access
-
-## Disclaimer
-
-This is an early-stage project and should not be actually used
-anywhere near a production server.
+- HAProxy with Unix socket access
+- Go 1.21+
 
 ## License
 
 [MIT License](LICENSE)
-
-## Contributions
-
-Contributions and feedback welcome.
