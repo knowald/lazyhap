@@ -1,4 +1,4 @@
-package certs
+package events
 
 import (
 	"strings"
@@ -8,7 +8,7 @@ import (
 )
 
 type Model interface {
-	CertsView() string
+	EventsView() string
 	GetViewport() viewport.Model
 	ViewportFilterMode() bool
 	ViewportFilterInput() string
@@ -16,7 +16,7 @@ type Model interface {
 
 func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 	viewport := m.GetViewport()
-	viewport.SetContent(m.CertsView())
+	viewport.SetContent(m.EventsView())
 	sb.WriteString(baseStyle.Render(viewport.View()))
 	sb.WriteString("\n")
 

@@ -10,6 +10,21 @@ import (
 	exec "os/exec"
 )
 
+func typeIcon(typeField string) string {
+	switch typeField {
+	case "0":
+		return "→FE"
+	case "1":
+		return "∑BE"
+	case "2":
+		return "SV"
+	case "3":
+		return "LI"
+	default:
+		return ""
+	}
+}
+
 func truncate(s string, length int) string {
 	if len(s) <= length {
 		return s
@@ -120,6 +135,23 @@ func filterRows(rows []table.Row, query string) []table.Row {
 	}
 
 	return filtered
+}
+
+// filterViewportLines filters lines of text, keeping only those matching the query
+func filterViewportLines(content, query string) string {
+	if query == "" {
+		return content
+	}
+	query = strings.ToLower(query)
+	lines := strings.Split(content, "\n")
+	var filtered []string
+	for _, line := range lines {
+		plain := stripANSI(line)
+		if strings.Contains(strings.ToLower(plain), query) {
+			filtered = append(filtered, line)
+		}
+	}
+	return strings.Join(filtered, "\n")
 }
 
 // stripANSI removes ANSI escape codes from a string

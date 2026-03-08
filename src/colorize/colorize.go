@@ -63,6 +63,58 @@ func ColorizeSessionOutput(content string) string {
 	return result.String()
 }
 
+// ColorizeActivityOutput adds syntax highlighting to activity output.
+// Activity lines have the format: "metric_name: value [per-thread values]"
+func ColorizeActivityOutput(content string) string {
+	lines := strings.Split(content, "\n")
+	var result strings.Builder
+
+	keyStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))   // Cyan for metric names
+	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2")) // Green for values
+	bracketStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // Gray for bracket contents
+
+	bracketPattern := regexp.MustCompile(`\[([^\]]*)\]`)
+
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			result.WriteString(line)
+		} else if idx := strings.Index(line, ":"); idx > 0 {
+			key := line[:idx]
+			rest := line[idx+1:]
+
+			coloredRest := bracketPattern.ReplaceAllStringFunc(rest, func(match string) string {
+				return bracketStyle.Render(match)
+			})
+
+			// Colorize the leading numeric value before any brackets
+			trimmed := strings.TrimSpace(rest)
+			if len(trimmed) > 0 && trimmed[0] >= '0' && trimmed[0] <= '9' {
+				spaceIdx := strings.IndexAny(trimmed, " \t[")
+				if spaceIdx > 0 {
+					numVal := trimmed[:spaceIdx]
+					afterNum := trimmed[spaceIdx:]
+					coloredAfter := bracketPattern.ReplaceAllStringFunc(afterNum, func(match string) string {
+						return bracketStyle.Render(match)
+					})
+					coloredRest = " " + valueStyle.Render(numVal) + coloredAfter
+				} else {
+					coloredRest = " " + valueStyle.Render(trimmed)
+				}
+			}
+
+			result.WriteString(keyStyle.Render(key) + ":" + coloredRest)
+		} else {
+			result.WriteString(line)
+		}
+
+		if i < len(lines)-1 {
+			result.WriteString("\n")
+		}
+	}
+
+	return result.String()
+}
+
 // ColorizeThreadOutput adds syntax highlighting to thread output
 func ColorizeThreadOutput(content string) string {
 	lines := strings.Split(content, "\n")

@@ -9,16 +9,18 @@ const defaultTableHeight = 20
 
 func InitializeTable() table.Model {
 	columns := []table.Column{
-		{Title: "Name", Width: 40},
-		{Title: "Server", Width: 25},
-		{Title: "Status", Width: 8},
-		{Title: "Cur Sess", Width: 10},
-		{Title: "Max Sess", Width: 10},
-		{Title: "Tot Sess", Width: 10},
-		{Title: "Bytes In", Width: 12},
-		{Title: "Bytes Out", Width: 12},
-		{Title: "Errors", Width: 8},
-		{Title: "Weight", Width: 8},
+		{Title: "Type", Width: 6},
+		{Title: "Name", Width: 38},
+		{Title: "Server", Width: 24},
+		{Title: "Status", Width: 10},
+		{Title: "Cur", Width: 6},
+		{Title: "Max", Width: 6},
+		{Title: "Total", Width: 8},
+		{Title: "Bytes In", Width: 10},
+		{Title: "Bytes Out", Width: 10},
+		{Title: "Rate/s", Width: 7},
+		{Title: "Errors", Width: 7},
+		{Title: "Weight", Width: 7},
 	}
 
 	t := table.New(

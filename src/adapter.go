@@ -34,6 +34,14 @@ func fetchThreads(cfg Config) tea.Msg {
 	return threadsMsg(execCommand(cfg, "show threads"))
 }
 
+func fetchActivity(cfg Config) tea.Msg {
+	return activityMsg(execCommand(cfg, "show activity"))
+}
+
+func fetchEvents(cfg Config) tea.Msg {
+	return eventsMsg(execCommand(cfg, "show events"))
+}
+
 func disableServer(cfg Config, backend, server string) tea.Cmd {
 	return func() tea.Msg {
 		cmd := fmt.Sprintf("disable server %s/%s", backend, server)
@@ -46,6 +54,37 @@ func enableServer(cfg Config, backend, server string) tea.Cmd {
 	return func() tea.Msg {
 		cmd := fmt.Sprintf("enable server %s/%s", backend, server)
 		execCommand(cfg, cmd)
+		return fetchStats(cfg)
+	}
+}
+
+func drainServer(cfg Config, backend, server string) tea.Cmd {
+	return func() tea.Msg {
+		cmd := fmt.Sprintf("set server %s/%s state drain", backend, server)
+		execCommand(cfg, cmd)
+		return fetchStats(cfg)
+	}
+}
+
+func readyServer(cfg Config, backend, server string) tea.Cmd {
+	return func() tea.Msg {
+		cmd := fmt.Sprintf("set server %s/%s state ready", backend, server)
+		execCommand(cfg, cmd)
+		return fetchStats(cfg)
+	}
+}
+
+func killServerSessions(cfg Config, backend, server string) tea.Cmd {
+	return func() tea.Msg {
+		cmd := fmt.Sprintf("shutdown sessions server %s/%s", backend, server)
+		execCommand(cfg, cmd)
+		return fetchStats(cfg)
+	}
+}
+
+func clearCounters(cfg Config) tea.Cmd {
+	return func() tea.Msg {
+		execCommand(cfg, "clear counters")
 		return fetchStats(cfg)
 	}
 }

@@ -25,6 +25,8 @@ const (
 	sessionsTab
 	certsTab
 	threadsTab
+	activityTab
+	eventsTab
 )
 
 type model struct {
@@ -39,6 +41,8 @@ type model struct {
 	certs        string
 	threads      string
 	sessions     string
+	activity     string
+	events       string
 	err          error
 	lastFetch    time.Time
 	width        int
@@ -47,7 +51,21 @@ type model struct {
 	showHelp     bool
 	filterMode   bool
 	filterInput  string
-	allStatsRows []table.Row // Store all rows for filtering
+	allStatsRows  []table.Row
+	allInfoRows   []table.Row
+	sortColumn     int
+	sortAscending  bool
+	confirmMode    bool
+	confirmAction  string
+	confirmBackend string
+	confirmServer  string
+	weightMode     bool
+	weightInput    string
+	weightBackend  string
+	weightServer   string
+	connected          bool
+	viewportFilterMode  bool
+	viewportFilterInput string
 }
 
 type (
@@ -55,8 +73,10 @@ type (
 	errorMsg   string
 	poolsMsg   string
 	sessionMsg string
-	certsMsg   string
-	threadsMsg string
+	certsMsg    string
+	threadsMsg  string
+	activityMsg string
+	eventsMsg   string
 )
 
 type clearMessageMsg struct{}
@@ -97,6 +117,7 @@ func fetchStats(cfg Config) tea.Msg {
 		}
 
 		row := table.Row{
+			typeIcon(fields[32]),    // Type
 			fields[0],              // Name
 			fields[1],              // Server
 			fields[17],             // Status
@@ -105,6 +126,7 @@ func fetchStats(cfg Config) tea.Msg {
 			fields[7],              // Total Sessions
 			formatBytes(fields[8]), // Bytes In
 			formatBytes(fields[9]), // Bytes Out
+			fields[33],             // Rate/s
 			fields[13],             // Errors
 			fields[18],             // Weight
 		}
@@ -139,11 +161,12 @@ func main() {
 	vp.SetHeight(DefaultViewportHeight)
 
 	m := model{
-		table:     stats.InitializeTable(),
-		viewport:  vp,
-		tabs:      []string{"Stats", "Info", "Errors", "Memory", "Sessions", "Certs", "Threads"},
-		activeTab: statsTab,
-		config:    cfg,
+		table:      stats.InitializeTable(),
+		viewport:   vp,
+		tabs:       []string{"Stats", "Info", "Errors", "Memory", "Sessions", "Certs", "Threads", "Activity", "Events"},
+		activeTab:  statsTab,
+		config:     cfg,
+		sortColumn: -1,
 	}
 
 	p := tea.NewProgram(m)

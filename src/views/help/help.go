@@ -11,26 +11,35 @@ var helpText = `LazyHAP - HAProxy TUI Tool
 NAVIGATION
   tab, right, l     Next tab
   shift+tab, left, h Previous tab
-  1-7               Jump to tab by number
+  1-9               Jump to tab by number
   j, down           Move down in table/list
   k, up             Move up in table/list
+  g                 Go to top
+  G                 Go to bottom
+  r                 Refresh current tab
+  y                 Copy selected value to clipboard
   ?                 Toggle this help screen
   q, esc, ctrl+c    Quit
 
 STATS TAB (Tab 1)
   /                 Start filtering (type to search)
   d                 Disable selected server
+  D                 Drain selected server
   e                 Enable selected server
-  w                 Set server weight to 100
+  R                 Set server state to ready
+  w                 Set server weight (input popup)
+  x                 Kill sessions (with confirmation)
+  c                 Clear all counters
+  s                 Cycle sort column (asc/desc)
 
-FILTER MODE (Stats Tab)
+INFO TAB (Tab 2)
+  /                 Start filtering (type to search)
+
+FILTER MODE (All Tabs)
   Type to search    Filter servers/backends
   Enter             Apply filter and exit mode
   Esc               Clear filter and exit mode
   Backspace         Delete last character
-
-INFO TAB (Tab 2)
-  y                 Yank (copy) selected value to clipboard
 
 STATUS COLORS
   Green (UP)        Server is healthy and active
@@ -51,6 +60,8 @@ TABS
   5. Sessions       Active sessions
   6. Certs          SSL certificate information
   7. Threads        Thread information
+  8. Activity        System activity metrics
+  9. Events          Event sinks and logs
 
 Press ? or q to close this help screen`
 

@@ -14,6 +14,13 @@ type Model interface {
 	FilterMode() bool
 	FilterInput() string
 	GetTable() table.Model
+	SortColumn() int
+	SortAscending() bool
+	ConfirmMode() bool
+	ConfirmPrompt() string
+	WeightMode() bool
+	WeightInput() string
+	WeightServer() string
 }
 
 func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
@@ -21,7 +28,16 @@ func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 	sb.WriteString(baseStyle.Render(renderColorizedTable(tbl)))
 	sb.WriteString("\n")
 
-	if m.FilterMode() {
+	if m.ConfirmMode() {
+		confirmStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true)
+		sb.WriteString(confirmStyle.Render(m.ConfirmPrompt()))
+	} else if m.WeightMode() {
+		weightStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+		sb.WriteString(weightStyle.Render("Weight for " + m.WeightServer() + ": " + m.WeightInput() + "█"))
+		sb.WriteString(" ")
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+		sb.WriteString(hintStyle.Render("(0-256  enter: apply  esc: cancel)"))
+	} else if m.FilterMode() {
 		filterStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 		sb.WriteString(filterStyle.Render("Filter: " + m.FilterInput() + "█"))
 		sb.WriteString(" ")
@@ -29,13 +45,26 @@ func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 		sb.WriteString(hintStyle.Render("(enter: apply  esc: clear)"))
 	} else {
 		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-		sb.WriteString(hintStyle.Render("d: disable  e: enable  w: weight  /: filter  ?: help  1-7: jump tabs"))
+		hint := "d: disable  D: drain  e: enable  R: ready  w: weight  s: sort  /: filter  ?: help"
+		if col := m.SortColumn(); col >= 0 {
+			cols := tbl.Columns()
+			if col < len(cols) {
+				arrow := "▲"
+				if !m.SortAscending() {
+					arrow = "▼"
+				}
+				sortStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+				hint += "  " + sortStyle.Render(cols[col].Title+" "+arrow)
+			}
+		}
+		sb.WriteString(hintStyle.Render(hint))
 	}
 }
 
 const (
-	statusColIndex = 2
-	errorsColIndex = 8
+	typeColIndex   = 0
+	statusColIndex = 3
+	errorsColIndex = 10
 	cellPadding    = 2 // Padding(0, 1) adds 1 char on each side
 )
 
@@ -52,17 +81,20 @@ func renderColorizedTable(tbl table.Model) string {
 
 	// Calculate the visible character offset where each column starts.
 	// Each cell is rendered at col.Width + cellPadding visible chars.
-	statusStart := 0
-	for i := 0; i < statusColIndex; i++ {
-		statusStart += cols[i].Width + cellPadding
+	colStart := func(idx int) int {
+		pos := 0
+		for i := 0; i < idx; i++ {
+			pos += cols[i].Width + cellPadding
+		}
+		return pos
 	}
-	statusEnd := statusStart + cols[statusColIndex].Width + cellPadding
+	colEnd := func(idx int) int {
+		return colStart(idx) + cols[idx].Width + cellPadding
+	}
 
-	errorsStart := 0
-	for i := 0; i < errorsColIndex; i++ {
-		errorsStart += cols[i].Width + cellPadding
-	}
-	errorsEnd := errorsStart + cols[errorsColIndex].Width + cellPadding
+	typeStart, typeEnd := colStart(typeColIndex), colEnd(typeColIndex)
+	statusStart, statusEnd := colStart(statusColIndex), colEnd(statusColIndex)
+	errorsStart, errorsEnd := colStart(errorsColIndex), colEnd(errorsColIndex)
 
 	lines := strings.Split(tableView, "\n")
 
@@ -75,6 +107,7 @@ func renderColorizedTable(tbl table.Model) string {
 		if i >= dataStart {
 			line = colorizeCellRange(line, statusStart, statusEnd, statusColor)
 			line = colorizeCellRange(line, errorsStart, errorsEnd, errorsColor)
+			line = boldAggregateRow(line, typeStart, typeEnd)
 		}
 		result.WriteString(line)
 		if i < len(lines)-1 {
@@ -175,6 +208,24 @@ func errorsColor(errors string) string {
 		return "\x1b[33m" // yellow
 	}
 	return "\x1b[1;31m" // bold red
+}
+
+// boldAggregateRow makes FE/BE rows bold by checking the Type column value.
+func boldAggregateRow(line string, typeStart, typeEnd int) string {
+	byteStart := visibleToBytePos(line, typeStart)
+	byteEnd := visibleToBytePos(line, typeEnd)
+	if byteStart >= len(line) {
+		return line
+	}
+	if byteEnd > len(line) {
+		byteEnd = len(line)
+	}
+	cell := line[byteStart:byteEnd]
+	plain := strings.TrimSpace(stripANSI(cell))
+	if plain == "→FE" || plain == "∑BE" {
+		return "\x1b[1m" + line + "\x1b[22m"
+	}
+	return line
 }
 
 // visibleToBytePos maps a visible rune position (ignoring ANSI escapes)

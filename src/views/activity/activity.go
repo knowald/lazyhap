@@ -1,14 +1,15 @@
-package certs
+package activity
 
 import (
 	"strings"
 
 	"charm.land/bubbles/v2/viewport"
 	"charm.land/lipgloss/v2"
+	"github.com/knowald/lazyhap/src/colorize"
 )
 
 type Model interface {
-	CertsView() string
+	ActivityView() string
 	GetViewport() viewport.Model
 	ViewportFilterMode() bool
 	ViewportFilterInput() string
@@ -16,7 +17,8 @@ type Model interface {
 
 func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 	viewport := m.GetViewport()
-	viewport.SetContent(m.CertsView())
+	content := colorize.ColorizeActivityOutput(m.ActivityView())
+	viewport.SetContent(content)
 	sb.WriteString(baseStyle.Render(viewport.View()))
 	sb.WriteString("\n")
 

@@ -10,6 +10,8 @@ import (
 type Model interface {
 	ErrorView() string
 	GetViewport() viewport.Model
+	ViewportFilterMode() bool
+	ViewportFilterInput() string
 }
 
 func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
@@ -17,6 +19,15 @@ func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 	viewport.SetContent(m.ErrorView())
 	sb.WriteString(baseStyle.Render(viewport.View()))
 	sb.WriteString("\n")
-	hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	sb.WriteString(hintStyle.Render("j/k: scroll  ?: help  1-7: jump tabs"))
+
+	if m.ViewportFilterMode() {
+		filterStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+		sb.WriteString(filterStyle.Render("Filter: " + m.ViewportFilterInput() + "█"))
+		sb.WriteString(" ")
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+		sb.WriteString(hintStyle.Render("(enter: apply  esc: clear)"))
+	} else {
+		hintStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
+		sb.WriteString(hintStyle.Render("j/k: scroll  /: filter  ?: help  1-9: jump tabs"))
+	}
 }
