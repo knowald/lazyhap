@@ -64,7 +64,10 @@ func RenderTab(sb *strings.Builder, m Model, baseStyle lipgloss.Style) {
 const (
 	typeColIndex   = 0
 	statusColIndex = 3
-	errorsColIndex = 10
+	curColIndex    = 4
+	maxColIndex    = 5
+	limitColIndex  = 6
+	errorsColIndex = 11
 	cellPadding    = 2 // Padding(0, 1) adds 1 char on each side
 )
 
@@ -94,6 +97,9 @@ func renderColorizedTable(tbl table.Model) string {
 
 	typeStart, typeEnd := colStart(typeColIndex), colEnd(typeColIndex)
 	statusStart, statusEnd := colStart(statusColIndex), colEnd(statusColIndex)
+	curStart, curEnd := colStart(curColIndex), colEnd(curColIndex)
+	maxStart, maxEnd := colStart(maxColIndex), colEnd(maxColIndex)
+	limitStart, limitEnd := colStart(limitColIndex), colEnd(limitColIndex)
 	errorsStart, errorsEnd := colStart(errorsColIndex), colEnd(errorsColIndex)
 
 	lines := strings.Split(tableView, "\n")
@@ -105,7 +111,15 @@ func renderColorizedTable(tbl table.Model) string {
 	var result strings.Builder
 	for i, line := range lines {
 		if i >= dataStart {
+			// Extract the limit value for this row to color Cur and Max relative to it
+			limitVal := extractCellValue(line, limitStart, limitEnd)
+			curColorFn := sessionsColor(limitVal)
+			maxColorFn := sessionsColor(limitVal)
+
 			line = colorizeCellRange(line, statusStart, statusEnd, statusColor)
+			line = colorizeCellRange(line, curStart, curEnd, curColorFn)
+			line = colorizeCellRange(line, maxStart, maxEnd, maxColorFn)
+			line = colorizeCellRange(line, limitStart, limitEnd, limitColor(limitVal))
 			line = colorizeCellRange(line, errorsStart, errorsEnd, errorsColor)
 			line = boldAggregateRow(line, typeStart, typeEnd)
 		}
@@ -274,4 +288,63 @@ func stripANSI(s string) string {
 		result.WriteByte(s[i])
 	}
 	return result.String()
+}
+
+// extractCellValue reads the plain text value from a cell at the given visible range.
+func extractCellValue(line string, visStart, visEnd int) string {
+	byteStart := visibleToBytePos(line, visStart)
+	byteEnd := visibleToBytePos(line, visEnd)
+	if byteStart >= len(line) {
+		return ""
+	}
+	if byteEnd > len(line) {
+		byteEnd = len(line)
+	}
+	return strings.TrimSpace(stripANSI(line[byteStart:byteEnd]))
+}
+
+// parseNum parses a numeric string, returning 0 if empty or invalid.
+func parseNum(s string) int64 {
+	var n int64
+	for _, c := range s {
+		if c >= '0' && c <= '9' {
+			n = n*10 + int64(c-'0')
+		} else {
+			return 0
+		}
+	}
+	return n
+}
+
+// sessionsColor returns a color function that compares a session count against
+// the limit (maxconn). Returns red at 100%, yellow at >=80%, no color otherwise.
+func sessionsColor(limit string) func(string) string {
+	limitN := parseNum(limit)
+	return func(value string) string {
+		if limitN <= 0 {
+			return ""
+		}
+		n := parseNum(value)
+		if n <= 0 {
+			return ""
+		}
+		if n >= limitN {
+			return "\x1b[1;31m" // bold red - at or over limit
+		}
+		if n*100/limitN >= 80 {
+			return "\x1b[33m" // yellow - approaching limit
+		}
+		return ""
+	}
+}
+
+// limitColor returns a color function for the Limit column itself.
+// Shows the limit in dim when set, invisible otherwise.
+func limitColor(limit string) func(string) string {
+	return func(value string) string {
+		if limit == "" || limit == "0" {
+			return ""
+		}
+		return "\x1b[2m" // dim
+	}
 }

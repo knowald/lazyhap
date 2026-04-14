@@ -15,6 +15,7 @@ func InitializeTable() table.Model {
 		{Title: "Status", Width: 10},
 		{Title: "Cur", Width: 6},
 		{Title: "Max", Width: 6},
+		{Title: "Limit", Width: 6},
 		{Title: "Total", Width: 8},
 		{Title: "Bytes In", Width: 10},
 		{Title: "Bytes Out", Width: 10},

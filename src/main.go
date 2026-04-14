@@ -123,6 +123,7 @@ func fetchStats(cfg Config) tea.Msg {
 			fields[17],             // Status
 			fields[4],              // Current Sessions
 			fields[5],              // Max Sessions
+			fields[6],              // Session Limit (maxconn)
 			fields[7],              // Total Sessions
 			formatBytes(fields[8]), // Bytes In
 			formatBytes(fields[9]), // Bytes Out
